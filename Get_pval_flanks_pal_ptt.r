@@ -84,6 +84,7 @@ GetPTTFile <- function (ptt.file = NULL, product = NULL){
     return(ptts)    
 }
 
+cat(paste('Time', 'nc.id','pval','hits.real','reps','genlen','maxcoord' sep="\t"), file=out.file, sep="\n", append=T)
 pval.find <-function (nc.id=NULL, ptt.file=NULL, pal.file=NULL){
     cat(paste(Sys.time(), "[START:]: ",nc.id, ptt.file, pal.file, sep="\t"), file=log.file, sep="\n", append=T)
 
@@ -116,7 +117,7 @@ pval.find <-function (nc.id=NULL, ptt.file=NULL, pal.file=NULL){
                 flanks.rand.ir <-reduce(c(leftside, rightside))
                 
                 hits.rand <-sum(countOverlaps(query=pals.ir, subject=flanks.rand.ir))
-                if (hits.rand >= hits.real) pval=pval+1
+                if (hits.rand > hits.real) pval=pval+1
             }
             
         }else{
@@ -127,7 +128,7 @@ pval.find <-function (nc.id=NULL, ptt.file=NULL, pal.file=NULL){
         cat(paste(Sys.time(), "ERROR! in reading .pal or empty PTT: ",nc.id, ptt.file, pal.file, sep="\t"), file=log.file, sep="\n", append=T)
         pval= -2
     }
-    cat(paste(Sys.time(), "result: ",nc.id, pval, sep="\t"), file=out.file, sep="\n", append=T)
+    cat(paste(Sys.time(), nc.id, pval, hits.real, reps, genlen, maxcoord, sep="\t"), file=out.file, sep="\n", append=T) #'Time', 'nc.id','pval','hits.real','reps','genlen','maxcoord'
     return(pval)
 }
 
