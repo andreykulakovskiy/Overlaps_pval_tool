@@ -8,18 +8,28 @@ require(RCurl)
 args <- commandArgs(TRUE) #use argumens
 # args[1] = pal.path
 # args[2] = ptt.path
-# args[3] = feature
-# args[4] = genlen.file
-# args[5] = flank.size
+# args[x] = feature
+# args[3] = genlen.file
+# args[x] = flank.size
 
 #====== List of parameters: ======
 pal.path = args[1] #"D:/DNAPUNCTUATION/ftp/bacteria_S6-15_L0-10_M1" #folder with .pal.cleaned files
 ptt.path = args[2] #"D:/DNAPUNCTUATION/all.ptt/" #folder with .ptt files
-feature = args[3] #'transposase' #feature in genes markdown(PTT files)
-genlenfile = args[4] #'D:/smpl_files/genome.length.txt'    
-flank_length = args[5]#50  #size of flank
-tag = 'TEST' #testing
+feature = 'transposase'#args[3]  #feature in genes markdown(PTT files)
+genlenfile = args[3] #'D:/smpl_files/genome.length.txt'    
+flank_length = 50 #as.integer(args[5])  #size of flank
+tag = 'ver.02'
 #=================================
+
+
+# #====== TESTING: ======
+# pal.path = 'D:/smpl_files/bacteria_S6-15_L0-10_M1' #folder with .pal.cleaned files
+# ptt.path = 'D:/DNAPUNCTUATION/all.ptt' #folder with .ptt files
+# feature = 'transposase' #feature in genes markdown(PTT files)
+# genlenfile = 'D:/smpl_files/genome.length.txt'    
+# flank_length = 50  #size of flank
+# tag = 'TEST' #testing
+# #=================================
 
 #Now let's create names of log.file, results and final summary
 palindrome.type = basename(pal.path) # Example: /ftp/bacteria_S6-15_L0-10_M1 ===> bacteria_S6-15_L0-10_M1  
@@ -48,8 +58,8 @@ pal.nc.id <-as.vector(regmatches(x, m))
 pal.nc.id <- substring(pal.nc.id, first=2, last=10)
 
 #prepare data.frames with .ptt and .pal.cleaned files
-ptt.df <- data.frame(ptt.file = paste0(ptt.path,ptt.files), nc.id = ptt.nc.id)
-pal.df <- data.frame(pal.file = paste0(pal.path,pal.files), nc.id = pal.nc.id)
+ptt.df <- data.frame(ptt.file = file.path(ptt.path,ptt.files), nc.id = ptt.nc.id) #path.file is better, then paste0 :)
+pal.df <- data.frame(pal.file = file.path(pal.path,pal.files), nc.id = pal.nc.id)
 
 #data.frame with both .ptt and pal.cleaned files, will be passed to our parallel env.
 all.df <- merge(ptt.df, pal.df,by = intersect("nc.id", "nc.id"))
@@ -57,6 +67,8 @@ all.df <- merge(ptt.df, pal.df,by = intersect("nc.id", "nc.id"))
 all.df$nc.id <-as.character(all.df$nc.id)
 all.df$ptt.file <-as.character(all.df$ptt.file)
 all.df$pal.file <-as.character(all.df$pal.file)
+
+len.start = nrow(all.df) #for sms report
 
 #function returns length of genome with id=nc.id
 GetGenLen <- function (nc.id=NULL) {
@@ -92,7 +104,7 @@ GetPTTFile <- function (ptt.file = NULL, product = NULL){
     return(ptts)    
 }
 
-cat(paste('Time', 'nc.id','pval','hits.real','reps','genlen','maxcoord' sep="\t"), file=out.file, sep="\n", append=T)
+cat(paste('Time', 'nc.id','pval','hits.real','reps','genlen','maxcoord', sep="\t"), file=out.file, sep="\n", append=T)
 pval.find <-function (nc.id=NULL, ptt.file=NULL, pal.file=NULL){
     cat(paste(Sys.time(), "[START:]: ",nc.id, ptt.file, pal.file, sep="\t"), file=log.file, sep="\n", append=T)
 
@@ -109,7 +121,7 @@ pval.find <-function (nc.id=NULL, ptt.file=NULL, pal.file=NULL){
         flanks.ir <-reduce(c(leftside, rightside)) 
         
         
-        hits.real <- sum(countOverlaps(query = pals.ir, subject = flanks.IR))
+        hits.real <- sum(countOverlaps(query = pals.ir, subject = flanks.ir))
         pval <- 0
         
         maxcoord<-genlen - (max(PTTs$Size)+flank_length)
@@ -136,14 +148,20 @@ pval.find <-function (nc.id=NULL, ptt.file=NULL, pal.file=NULL){
         cat(paste(Sys.time(), "ERROR! in reading .pal or empty PTT: ",nc.id, ptt.file, pal.file, sep="\t"), file=log.file, sep="\n", append=T)
         pval= -2
     }
-    cat(paste(Sys.time(), nc.id, pval, hits.real, reps, genlen, maxcoord, sep="\t"), file=out.file, sep="\n", append=T) #'Time', 'nc.id','pval','hits.real','reps','genlen','maxcoord'
+    ##
+    if (pval >= 0){
+        cat(paste(Sys.time(), nc.id, pval, hits.real, reps, genlen, maxcoord, sep="\t"), file=out.file, sep="\n", append=T) #'Time', 'nc.id','pval','hits.real','reps','genlen','maxcoord'
+    }else{
+        cat(paste(Sys.time(), nc.id, pval, -1, -1, -1, -1, sep="\t"), file=out.file, sep="\n", append=T) #'Time', 'nc.id','pval','hits.real','reps','genlen','maxcoord'
+    }
+    ##
     return(pval)
 }
 
-send_sms <- function(time.start, time.end){
+send_sms <- function(time.start, time.end, len.start, len.end){
     nodename = Sys.info()['nodename']
     filename = cur.res.name
-    status = 'DONE'
+    status = paste(len.start, len.end, sep="#")
     time.total = paste0(ceiling(difftime(time.end,time.start, units='mins')[[1]]), " mins")
     msg.text = paste(filename,nodename,status,time.total, sep = ' | ')
 
@@ -156,8 +174,8 @@ send_sms <- function(time.start, time.end){
 
 
 cat(paste(Sys.time(), "Making cluster!", sep="\t"), file=log.file, sep="\n", append=T)
-cl.local<-makeCluster(getOption("cl.cores", 3))
-clusterExport(cl=cl.local, varlist=c("all.df", "genlen.all", "pval.find", "GetGenLen","GetPTTFile", 'log.file','out.file', "feature"))
+cl.local<-makeCluster(getOption("cl.cores", 4))
+clusterExport(cl=cl.local, varlist=c("all.df", "genlen.all", "pval.find", "GetGenLen","GetPTTFile", 'log.file','out.file', "feature", 'flank_length'))
 clusterEvalQ(cl.local,require(IRanges))
 clusterEvalQ(cl.local,require(data.table))
 clusterEvalQ(cl.local,require(plyr))
@@ -171,7 +189,8 @@ worktime.finish = Sys.time() #Time when spript finished
 
 
 cat(paste(Sys.time(), "DONE!", sep="\t"), file=log.file, sep="\n", append=T)
-send_sms(worktime.start, worktime.finish)
+len.end = length(all.df$rslts) #for sms report
+send_sms(worktime.start, worktime.finish, len.start, len.end)
 
 
 
