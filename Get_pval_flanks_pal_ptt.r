@@ -5,12 +5,19 @@ require (data.table)
 require(plyr)
 require(RCurl)
 
+args <- commandArgs(TRUE) #use argumens
+# args[1] = pal.path
+# args[2] = ptt.path
+# args[3] = feature
+# args[4] = genlen.file
+# args[5] = flank.size
+
 #====== List of parameters: ======
-pal.path <- "D:/DNAPUNCTUATION/ftp/bacteria_S6-15_L0-10_M1" #folder with .pal.cleaned files
-ptt.path <- "D:/DNAPUNCTUATION/all.ptt/" #folder with .ptt files
-feature = 'transposase' #feature in genes markdown(PTT files)
-genlenfile = 'D:/smpl_files/genome.length.txt'    
-flank_length = 50  #size of flank
+pal.path = args[1] #"D:/DNAPUNCTUATION/ftp/bacteria_S6-15_L0-10_M1" #folder with .pal.cleaned files
+ptt.path = args[2] #"D:/DNAPUNCTUATION/all.ptt/" #folder with .ptt files
+feature = args[3] #'transposase' #feature in genes markdown(PTT files)
+genlenfile = args[4] #'D:/smpl_files/genome.length.txt'    
+flank_length = args[5]#50  #size of flank
 tag = 'TEST' #testing
 #=================================
 
