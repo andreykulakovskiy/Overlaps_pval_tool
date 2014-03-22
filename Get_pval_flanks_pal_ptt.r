@@ -1,3 +1,4 @@
+worktime.start = Sys.time() #Get time of script's start...
 require(IRanges)
 require(parallel)
 require (data.table)
@@ -5,12 +6,12 @@ require(plyr)
 require(RCurl)
 
 #====== List of parameters: ======
-pal.path <- ("D:/DNAPUNCTUATION/ftp/bacteria_S6-15_L0-10_M1") #folder with .pal.cleaned files
+pal.path <- "D:/DNAPUNCTUATION/ftp/bacteria_S6-15_L0-10_M1" #folder with .pal.cleaned files
 ptt.path <- "D:/DNAPUNCTUATION/all.ptt/" #folder with .ptt files
 feature = 'transposase' #feature in genes markdown(PTT files)
 genlenfile = 'D:/smpl_files/genome.length.txt'    
 flank_length = 50  #size of flank
-tag = 'TEST' #using for tagging file
+tag = 'TEST' #testing
 #=================================
 
 #Now let's create names of log.file, results and final summary
@@ -132,6 +133,20 @@ pval.find <-function (nc.id=NULL, ptt.file=NULL, pal.file=NULL){
     return(pval)
 }
 
+send_sms <- function(time.start, time.end){
+    nodename = Sys.info()['nodename']
+    filename = cur.res.name
+    status = 'DONE'
+    time.total = paste0(ceiling(difftime(time.end,time.start, units='mins')[[1]]), " mins")
+    msg.text = paste(filename,nodename,status,time.total, sep = ' | ')
+
+    api_id = 'dfdbb9ca-08dd-6954-cd3b-ee8556c9a9b5'
+    phone = '79269326848'
+    
+    sms <- postForm(uri='http://sms.ru/sms/send', api_id = api_id, to = phone, text=msg.text, translit = 1)
+    return(sms)
+}
+
 
 cat(paste(Sys.time(), "Making cluster!", sep="\t"), file=log.file, sep="\n", append=T)
 cl.local<-makeCluster(getOption("cl.cores", 3))
@@ -145,8 +160,11 @@ cat(paste(Sys.time(), "Stopping Cluster", sep="\t"), file=log.file, sep="\n", ap
 
 write.table(x<-all.df, file=all.file, sep="\t")
 
-cat(paste(Sys.time(), "DONE!", sep="\t"), file=log.file, sep="\n", append=T)
+worktime.finish = Sys.time() #Time when spript finished
 
+
+cat(paste(Sys.time(), "DONE!", sep="\t"), file=log.file, sep="\n", append=T)
+send_sms(worktime.start, worktime.finish)
 
 
 
